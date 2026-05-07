@@ -1,0 +1,16 @@
+# Connect-Bern: Netlify build config for the Flutter web target.
+# Flutter and Rust are installed on demand by scripts/netlify-build.sh.
+
+[build]
+  command = "bash scripts/netlify-build.sh"
+  publish = "build/web"
+
+[build.environment]
+  FLUTTER_VERSION = "3.41.9"
+  FLUTTER_CHANNEL = "stable"
+
+# SPA fallback: every unknown path serves index.html so go_router can handle it.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
