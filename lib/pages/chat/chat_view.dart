@@ -12,6 +12,7 @@ import 'package:fluffychat/pages/chat/chat_event_list.dart';
 import 'package:fluffychat/pages/chat/encryption_button.dart';
 import 'package:fluffychat/pages/chat/jitsi_popup_button.dart';
 import 'package:fluffychat/pages/chat/pinned_events.dart';
+import 'package:fluffychat/pages/chat/cb_signing_chip.dart';
 import 'package:fluffychat/pages/chat/reply_display.dart';
 import 'package:fluffychat/utils/account_config.dart';
 import 'package:fluffychat/utils/localized_exception_extension.dart';
@@ -397,6 +398,8 @@ class ChatView extends StatelessWidget {
                                         mainAxisSize: .min,
                                         children: [
                                           ReplyDisplay(controller),
+                                          // Connect-Bern signature chip:
+                                          CbSigningChip(controller),
                                           ChatInputRow(controller),
                                           ChatEmojiPicker(controller),
                                         ],

@@ -26,6 +26,7 @@ import 'package:fluffychat/widgets/adaptive_dialogs/show_modal_action_popup.dart
 import 'package:fluffychat/widgets/adaptive_dialogs/show_ok_cancel_alert_dialog.dart';
 import 'package:fluffychat/widgets/adaptive_dialogs/show_text_input_dialog.dart';
 import 'package:fluffychat/widgets/future_loading_dialog.dart';
+import 'package:fluffychat/utils/cb_signature.dart';
 import 'package:fluffychat/widgets/matrix.dart';
 import 'package:fluffychat/widgets/share_scaffold_dialog.dart';
 import 'package:flutter/foundation.dart';
@@ -265,6 +266,11 @@ class ChatController extends State<ChatPageWithRoom>
     final draft = prefs.getString('draft_$roomId');
     if (draft != null && draft.isNotEmpty) {
       sendController.text = draft;
+    }
+    // Connect-Bern: auto-insert signature if last room activity is >24h old.
+    if (CbSignature.shouldAutoInsertForRoom(room) &&
+        !CbSignature.textHasSignature(sendController.text)) {
+      sendController.text = CbSignature.appendSignature(sendController.text);
     }
   }
 
@@ -1294,7 +1300,11 @@ class ChatController extends State<ChatPageWithRoom>
     _storeInputTimeoutTimer?.cancel();
     _storeInputTimeoutTimer = Timer(_storeInputTimeout, () async {
       final prefs = Matrix.of(context).store;
-      await prefs.setString('draft_$roomId', text);
+      // Connect-Bern: strip signature line so it never lands in drafts.
+      await prefs.setString(
+        'draft_$roomId',
+        CbSignature.stripSignature(text),
+      );
     });
     if (text.endsWith(' ') && Matrix.of(context).hasComplexBundles) {
       final clients = currentRoomBundle;

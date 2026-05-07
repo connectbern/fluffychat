@@ -15,6 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:universal_html/universal_html.dart' as web;
 
 import 'config/setting_keys.dart';
+import 'utils/cb_signature.dart';
 import 'utils/background_push.dart';
 import 'widgets/fluffy_chat_app.dart';
 
@@ -88,6 +89,8 @@ void main() async {
 
 /// Fetch the pincode for the applock and start the flutter engine.
 Future<void> startGui(List<Client> clients, SharedPreferences store) async {
+  // Connect-Bern: load persisted signing name before any UI builds.
+  await CbSignature.init(store);
   // Fetch the pin for the applock if existing for mobile applications.
   String? pin;
   if (PlatformInfos.isMobile) {
