@@ -28,6 +28,7 @@ import 'package:url_launcher/url_launcher_string.dart';
 import '../config/setting_keys.dart';
 import '../pages/key_verification/key_verification_dialog.dart';
 import '../utils/account_bundles.dart';
+import '../utils/cb_auto_accept_invites.dart';
 import '../utils/background_push.dart';
 import 'local_notifications_extension.dart';
 
@@ -178,6 +179,7 @@ class MatrixState extends State<Matrix> with WidgetsBindingObserver {
   final onNotification = <String, StreamSubscription>{};
   final onLogoutSub = <String, StreamSubscription<LoginState>>{};
   final onUiaRequest = <String, StreamSubscription<UiaRequest>>{};
+  final cbAutoAcceptInvites = <String, CbAutoAcceptInvites>{};
 
   String? _cachedPassword;
   Timer? _cachedPasswordClearTimer;
@@ -220,6 +222,7 @@ class MatrixState extends State<Matrix> with WidgetsBindingObserver {
       );
       return;
     }
+    cbAutoAcceptInvites[name] ??= CbAutoAcceptInvites(c);
     onRoomKeyRequestSub[name] ??= c.onRoomKeyRequest.stream.listen((
       RoomKeyRequest request,
     ) async {
@@ -302,6 +305,8 @@ class MatrixState extends State<Matrix> with WidgetsBindingObserver {
     onLogoutSub.remove(name);
     onNotification[name]?.cancel();
     onNotification.remove(name);
+    cbAutoAcceptInvites[name]?.dispose();
+    cbAutoAcceptInvites.remove(name);
   }
 
   void initMatrix() {
