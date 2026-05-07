@@ -51,7 +51,7 @@ enum AppSettings<T> {
   displayChatDetailsColumn('chat.fluffy.display_chat_details_column', false),
   // AppConfig-mirrored settings
   applicationName<String>('chat.fluffy.application_name', 'FluffyChat'),
-  defaultHomeserver<String>('chat.fluffy.default_homeserver', 'matrix.org'),
+  defaultHomeserver<String>('chat.fluffy.default_homeserver', 'chagai.website'),
   // colorSchemeSeed stored as ARGB int
   colorSchemeSeedInt<int>('chat.fluffy.color_scheme_seed', 0xFF5625BA),
   emojiSuggestionLocale<String>('emoji_suggestion_locale', ''),

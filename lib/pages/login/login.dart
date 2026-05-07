@@ -22,7 +22,9 @@ class Login extends StatefulWidget {
 }
 
 class LoginController extends State<Login> {
-  final TextEditingController usernameController = TextEditingController();
+  // Connect-Bern: pre-fill username for stayinginbern@chagai.website.
+  final TextEditingController usernameController =
+      TextEditingController(text: 'stayinginbern');
   final TextEditingController passwordController = TextEditingController();
   String? usernameError;
   String? passwordError;
