@@ -51,9 +51,10 @@ class ChatListViewBody extends StatelessWidget {
     final publicRooms = controller.roomSearchResult?.chunk
         .where((room) => room.roomType != 'm.space')
         .toList();
-    final publicSpaces = controller.roomSearchResult?.chunk
-        .where((room) => room.roomType == 'm.space')
-        .toList();
+    // Connect-Bern: spaces UI hidden — publicSpaces variable removed.
+    // final publicSpaces = controller.roomSearchResult?.chunk
+    //     .where((room) => room.roomType == 'm.space')
+    //     .toList();
     final userSearchResult = controller.userSearchResult;
     const dummyChatCount = 4;
     final filter = controller.searchController.text.toLowerCase();
@@ -78,11 +79,12 @@ class ChatListViewBody extends StatelessWidget {
                       icon: const Icon(Icons.explore_outlined),
                     ),
                     PublicRoomsHorizontalList(publicRooms: publicRooms),
-                    SearchTitle(
-                      title: L10n.of(context).publicSpaces,
-                      icon: const Icon(Icons.workspaces_outlined),
-                    ),
-                    PublicRoomsHorizontalList(publicRooms: publicSpaces),
+                    // Connect-Bern: hide public spaces search section.
+                    // SearchTitle(
+                    //   title: L10n.of(context).publicSpaces,
+                    //   icon: const Icon(Icons.workspaces_outlined),
+                    // ),
+                    // PublicRoomsHorizontalList(publicRooms: publicSpaces),
                     SearchTitle(
                       title: L10n.of(context).users,
                       icon: const Icon(Icons.group_outlined),
@@ -136,7 +138,12 @@ class ChatListViewBody extends StatelessWidget {
                         scrollDirection: Axis.horizontal,
                         children: [
                           ...ActiveFilter.values
-                              .where((filter) => filter != ActiveFilter.tag)
+                              // Connect-Bern: hide Spaces filter chip.
+                              .where(
+                                (filter) =>
+                                    filter != ActiveFilter.tag &&
+                                    filter != ActiveFilter.spaces,
+                              )
                               .map(
                                 (filter) => Padding(
                                   padding: const EdgeInsets.symmetric(
