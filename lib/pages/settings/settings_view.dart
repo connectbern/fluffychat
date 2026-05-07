@@ -168,6 +168,15 @@ class SettingsView extends StatelessWidget {
                   ? theme.colorScheme.surfaceContainerHigh
                   : null,
             ),
+            // Connect-Bern: Signature settings entry.
+            ListTile(
+              leading: const Icon(Icons.draw_outlined),
+              title: const Text('Signature'),
+              onTap: () => context.go('/rooms/settings/signature'),
+              tileColor: activeRoute.startsWith('/rooms/settings/signature')
+                  ? theme.colorScheme.surfaceContainerHigh
+                  : null,
+            ),
             ListTile(
               leading: const Icon(Icons.forum_outlined),
               title: Text(L10n.of(context).chat),

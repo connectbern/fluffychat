@@ -4,6 +4,7 @@ import 'package:fluffychat/pages/chat_list/chat_list.dart';
 import 'package:fluffychat/pages/chat_list/client_chooser_button.dart';
 import 'package:fluffychat/utils/sync_status_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:matrix/matrix.dart';
 
 import '../../widgets/matrix.dart';
@@ -30,6 +31,14 @@ class ChatListHeader extends StatelessWidget implements PreferredSizeWidget {
       scrolledUnderElevation: 0,
       backgroundColor: Colors.transparent,
       automaticallyImplyLeading: false,
+      // Connect-Bern: shortcut to Signature settings.
+      actions: [
+        IconButton(
+          tooltip: 'Signature',
+          icon: const Icon(Icons.draw_outlined),
+          onPressed: () => context.go('/rooms/settings/signature'),
+        ),
+      ],
       title: StreamBuilder(
         stream: client.onSyncStatus.stream,
         builder: (context, snapshot) {
