@@ -25,7 +25,10 @@ flutter --version
 flutter config --no-analytics --no-cli-animations
 
 echo "==> Installing Rust (for vodozemac)"
-if ! command -v cargo >/dev/null 2>&1; then
+# Netlify images ship rustup without a default toolchain; handle both cases.
+if command -v rustup >/dev/null 2>&1; then
+  rustup default stable
+elif ! command -v cargo >/dev/null 2>&1; then
   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
 fi
 export PATH="${CARGO_HOME}/bin:${PATH}"
