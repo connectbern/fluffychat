@@ -34,6 +34,13 @@ fi
 export PATH="${CARGO_HOME}/bin:${PATH}"
 cargo --version
 
+echo "==> Adding wasm32 target and installing wasm-pack"
+rustup target add wasm32-unknown-unknown
+if ! command -v wasm-pack >/dev/null 2>&1; then
+  curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+fi
+wasm-pack --version
+
 echo "==> Running project's prepare-web.sh"
 bash scripts/prepare-web.sh
 
