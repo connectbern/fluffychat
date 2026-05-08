@@ -24,7 +24,7 @@ export PATH="${FLUTTER_DIR}/bin:${PATH}"
 flutter --version
 flutter config --no-analytics --no-cli-animations
 
-echo "==> Installing Rust (for vodozemac)"
+echo "==> Installing Rust stable + nightly (for vodozemac)"
 # Netlify images ship rustup without a default toolchain; handle both cases.
 if command -v rustup >/dev/null 2>&1; then
   rustup default stable
@@ -34,15 +34,21 @@ fi
 export PATH="${CARGO_HOME}/bin:${PATH}"
 cargo --version
 
-echo "==> Adding wasm32 target and installing wasm-pack"
+# flutter_rust_bridge_codegen build-web uses nightly + rust-src + wasm32
+rustup toolchain install nightly
+rustup component add rust-src --toolchain nightly
 rustup target add wasm32-unknown-unknown
+rustup target add wasm32-unknown-unknown --toolchain nightly
+
+echo "==> Installing wasm-pack"
 if ! command -v wasm-pack >/dev/null 2>&1; then
   curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 fi
 wasm-pack --version
 
 echo "==> Running project's prepare-web.sh"
-bash scripts/prepare-web.sh
+# Run with -e so any failure (including missing vodozemac output) stops the build
+bash -euo pipefail scripts/prepare-web.sh
 
 echo "==> Building web release"
 flutter build web --release
