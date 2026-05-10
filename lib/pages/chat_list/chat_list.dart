@@ -140,7 +140,11 @@ class ChatListController extends State<ChatList>
       case ActiveFilter.groups:
         return (room) => !room.isSpace && !room.isDirectChat;
       case ActiveFilter.unread:
-        return (room) => room.isUnreadOrInvited;
+        // Connect-Bern: hide large group chats (>5 members) from unread tab
+        return (room) =>
+            room.isUnreadOrInvited &&
+            (room.isDirectChat ||
+                (room.summary.mJoinedMemberCount ?? 0) <= 5);
       case ActiveFilter.spaces:
         return (room) => room.isSpace;
       case ActiveFilter.tag:
@@ -410,7 +414,7 @@ class ChatListController extends State<ChatList>
           ActiveFilter.values.singleWhereOrNull(
             (filter) => AppSettings.chatFilter.value == filter.name,
           ) ??
-          ActiveFilter.allChats;
+          ActiveFilter.unread; // Connect-Bern: default to unread tab
     }
 
     super.initState();

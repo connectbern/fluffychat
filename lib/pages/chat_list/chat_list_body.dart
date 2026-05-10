@@ -210,7 +210,10 @@ class ChatListViewBody extends StatelessWidget {
                           child: Text(
                             client.rooms.isEmpty
                                 ? L10n.of(context).noChatsFoundHere
-                                : L10n.of(context).noMoreChatsFound,
+                                : controller.activeFilter ==
+                                        ActiveFilter.unread
+                                    ? 'No unread messages.\nTap "All chats" to see everything.'
+                                    : L10n.of(context).noMoreChatsFound,
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 18,
