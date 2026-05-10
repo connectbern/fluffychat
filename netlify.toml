@@ -9,6 +9,13 @@
   FLUTTER_VERSION = "3.41.9"
   FLUTTER_CHANNEL = "stable"
 
+# COOP/COEP headers required for SharedArrayBuffer (vodozemac WASM threading).
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cross-Origin-Opener-Policy = "same-origin"
+    Cross-Origin-Embedder-Policy = "require-corp"
+
 # SPA fallback: every unknown path serves index.html so go_router can handle it.
 [[redirects]]
   from = "/*"
