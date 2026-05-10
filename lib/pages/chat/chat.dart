@@ -268,7 +268,9 @@ class ChatController extends State<ChatPageWithRoom>
       sendController.text = draft;
     }
     // Connect-Bern: auto-insert signature if last room activity is >24h old.
-    if (CbSignature.shouldAutoInsertForRoom(room) &&
+    // Use widget.room directly (the 'room' getter needs sendingClient which
+    // isn't initialized yet when _loadDraft is called from initState).
+    if (CbSignature.shouldAutoInsertForRoom(widget.room) &&
         !CbSignature.textHasSignature(sendController.text)) {
       sendController.text = CbSignature.appendSignature(sendController.text);
     }
