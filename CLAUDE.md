@@ -1,66 +1,88 @@
 # Claude Instructions — Connect-Bern / FluffyChat
 
-## ALWAYS work natively on Windows. NEVER use the Linux sandbox.
+## Working on this project
 
-This project lives at `C:\Users\chaga\OneDrive\Documents\fluffychat` (the mounted workspace folder).
-All file edits, git operations, and Flutter commands must be run **directly on Windows**, either via:
-- The **Read / Write / Edit** file tools (which write directly to the Windows filesystem), or
-- A **Windows terminal** opened via computer-use (PowerShell or Windows Terminal).
+**For file edits:** Use the Read / Write / Edit tools directly on the Windows path
+`C:\Users\chaga\OneDrive\Documents\fluffychat\`. These write straight to disk.
 
-**Do NOT:**
-- Clone the repo to `/tmp/` or any Linux path and work from there
-- Use the Linux bash sandbox for git commits or pushes
-- Run flutter, dart, or cargo from the Linux sandbox
+**For git and build commands:** Use WSL (see below). Do NOT use the Linux sandbox —
+it cannot push to git (EPERM on `.git/` over virtiofs) and background processes
+die between tool calls.
 
-**Do instead:**
-- Edit files directly in `C:\Users\chaga\OneDrive\Documents\fluffychat\` using the file tools
-- For git operations (commit, push), open a Windows Terminal via computer-use and run commands there
-- Push credentials: `https://connectbern:TOKEN@github.com/connectbern/fluffychat.git`
+**Never:**
+- Clone the repo to `/tmp/` in the sandbox and work from there
+- Run `flutter`, `dart`, or `cargo` from the Linux sandbox
+- Use the sandbox bash for git commits or pushes
+
+---
 
 ## Branch
 
-All Connect-Bern work happens on the **`Connect-Bern`** branch.
-Never commit to `main`. Keep history clean — squash fixup commits before pushing.
+All Connect-Bern work is on the **`Connect-Bern`** branch. Never commit to `main`.
+Squash WIP commits before pushing: `git rebase -i HEAD~N`.
+Commit message format: `Connect-Bern: short description`
 
-## Running locally
+---
 
-Flutter is installed on the user's Windows machine. To run locally:
-```powershell
-cd C:\Users\chaga\OneDrive\Documents\fluffychat
+## Local development via WSL (recommended)
+
+WSL2 is the right environment for builds. It has a native Linux filesystem
+(fast git, no permission issues), persistent processes, and `localhost` is
+shared with Windows Chrome.
+
+### One-time WSL setup
+
+Open a WSL terminal (Ubuntu) and run:
+
+```bash
+# 1. Clone the repo inside WSL's native filesystem (fast I/O, no virtiofs)
+cd ~
+git clone https://github.com/connectbern/fluffychat.git
+cd fluffychat
 git checkout Connect-Bern
-bash scripts/prepare-web.sh   # builds vodozemac WASM (requires Rust)
-flutter run -d chrome
+
+# 2. Install Flutter (stable)
+cd ~
+curl -L https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.29.3-stable.tar.xz \
+  -o flutter.tar.xz
+tar xf flutter.tar.xz
+echo 'export PATH="$HOME/flutter/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+flutter --version   # first run downloads Dart SDK (~30s)
+flutter config --no-analytics
+
+# 3. Install Rust stable + nightly (needed for vodozemac WASM)
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+source ~/.cargo/env
+rustup toolchain install nightly
+rustup component add rust-src --toolchain nightly
+rustup target add wasm32-unknown-unknown
+rustup target add wasm32-unknown-unknown --toolchain nightly
+
+# 4. Install wasm-pack
+curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+# 5. Install yq (needed by prepare-web.sh)
+curl -sL https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
+  -o ~/yq && chmod +x ~/yq && sudo mv ~/yq /usr/local/bin/yq
 ```
 
-To just test UI changes without vodozemac (faster):
-```powershell
-flutter run -d chrome --dart-define=SKIP_VODOZEMAC=true
+### Running the app locally
+
+```bash
+cd ~/fluffychat
+git checkout Connect-Bern
+git pull
+
+# Build vodozemac WASM (~3-5 min first time, cached after)
+bash -euo pipefail scripts/prepare-web.sh
+
+# Run on localhost:8080 (opens in Windows Chrome)
+flutter run -d web-server --web-port 8080 --web-hostname 0.0.0.0
 ```
 
-## Architecture — Connect-Bern custom features
+Then open `http://localhost:8080` in Chrome on Windows.
 
-All custom code is marked with `// Connect-Bern:` comments. Key files:
-
-| Feature | File |
-|---|---|
-| Pre-filled homeserver + username | `lib/pages/sign_in/view_model/sign_in_view_model.dart` |
-| Auto-accept invites | `lib/widgets/matrix.dart` |
-| Message signature chip | `lib/pages/chat/input_bar.dart`, `lib/pages/chat/chat.dart` |
-| Signature settings page | `lib/pages/settings/settings.dart`, `lib/pages/settings/settings_view.dart` |
-| Pencil icon in sidebar | `lib/widgets/navigation_rail.dart` |
-| Hide spaces UI | `lib/pages/chat_list/chat_list_body.dart` |
-| Unread tab filter + default | `lib/pages/chat_list/chat_list.dart` |
-| Netlify build script | `scripts/netlify-build.sh` |
-| Netlify config (COOP/COEP headers) | `netlify.toml` |
-
-## Deployment
-
-Pushing to `Connect-Bern` on GitHub triggers an automatic Netlify build.
-Live URL: **https://connect-bern-chat.netlify.app/web**
-Netlify build time: ~4 minutes.
-
-## Git hygiene
-
-- Commit messages: `Connect-Bern: short description of change`
-- Squash WIP/fixup commits before pushing: `git rebase -i HEAD~N`
-- Never force-push unless fixing a bad commit on Connect-Bern only
+**Faster iteration (skip vodozemac, UI changes only):**
+```bash
+flutt
