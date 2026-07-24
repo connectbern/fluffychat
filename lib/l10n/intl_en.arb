@@ -1195,6 +1195,31 @@
         "type": "String",
         "placeholders": {}
     },
+    "messageAPhoneNumber": "Message a phone number",
+    "@messageAPhoneNumber": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "messageAPhoneNumberSubtitle": "Start a WhatsApp chat",
+    "@messageAPhoneNumberSubtitle": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "messageAPhoneNumberHint": "Enter a phone number in any format. Swiss numbers work without a country code; for other countries add the country code (e.g. +49…).",
+    "@messageAPhoneNumberHint": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "startChat": "Start chat",
+    "@startChat": {
+        "type": "String",
+        "placeholders": {}
+    },
+    "enterAValidPhoneNumber": "Please enter a valid phone number.",
+    "@enterAValidPhoneNumber": {
+        "type": "String",
+        "placeholders": {}
+    },
     "newMessageInFluffyChat": "💬 New message in FluffyChat",
     "@newMessageInFluffyChat": {
         "type": "String",

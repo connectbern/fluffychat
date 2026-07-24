@@ -132,6 +132,22 @@ class NewPrivateChatView extends StatelessWidget {
                           const SizedBox(height: 8),
                           ListTile(
                             leading: CircleAvatar(
+                              backgroundColor: theme.colorScheme.primary,
+                              foregroundColor: theme.colorScheme.onPrimary,
+                              child: const Icon(
+                                Icons.chat_bubble_outline_outlined,
+                              ),
+                            ),
+                            title: Text(
+                              L10n.of(context).messageAPhoneNumber,
+                            ),
+                            subtitle: Text(
+                              L10n.of(context).messageAPhoneNumberSubtitle,
+                            ),
+                            onTap: controller.startWhatsAppByNumberAction,
+                          ),
+                          ListTile(
+                            leading: CircleAvatar(
                               backgroundColor:
                                   theme.colorScheme.secondaryContainer,
                               foregroundColor:
