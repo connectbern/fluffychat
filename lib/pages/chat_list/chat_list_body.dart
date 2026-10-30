@@ -177,6 +177,11 @@ class ChatListViewBody extends StatelessWidget {
                         ],
                       ),
                     ),
+                  // Connect-Bern: "Not answered" is still checking older chats.
+                  if (!controller.isSearchMode &&
+                      controller.activeFilter == ActiveFilter.unanswered &&
+                      controller.unansweredTracker.isBusy)
+                    const LinearProgressIndicator(minHeight: 2),
                   if (controller.isSearchMode)
                     SearchTitle(
                       title: L10n.of(context).chats,
@@ -213,6 +218,11 @@ class ChatListViewBody extends StatelessWidget {
                                 : controller.activeFilter ==
                                         ActiveFilter.unread
                                     ? 'No unread messages.\nTap "All chats" to see everything.'
+                                    : controller.activeFilter ==
+                                          ActiveFilter.unanswered
+                                    ? (controller.unansweredTracker.isBusy
+                                          ? L10n.of(context).checkingChats
+                                          : L10n.of(context).noUnansweredChats)
                                     : L10n.of(context).noMoreChatsFound,
                             textAlign: TextAlign.center,
                             style: TextStyle(

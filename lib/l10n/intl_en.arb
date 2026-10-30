@@ -2824,5 +2824,8 @@
     "addTag": "Add tag",
     "removeTag": "Remove tag",
     "tagName": "Tag name",
-    "createNewTag": "Create new tag"
+    "createNewTag": "Create new tag",
+    "notAnswered": "Not answered",
+    "checkingChats": "Checking chats…",
+    "noUnansweredChats": "Everything is answered 🎉"
 }

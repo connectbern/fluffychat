@@ -4,6 +4,7 @@ import 'package:collection/collection.dart';
 import 'package:cross_file/cross_file.dart';
 import 'package:fluffychat/config/app_config.dart';
 import 'package:fluffychat/l10n/l10n.dart';
+import 'package:fluffychat/pages/chat_list/cb_unanswered.dart';
 import 'package:fluffychat/pages/chat_list/chat_list_view.dart';
 import 'package:fluffychat/utils/localized_exception_extension.dart';
 import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_locals.dart';
@@ -29,7 +30,15 @@ import '../../config/setting_keys.dart';
 import '../../utils/url_launcher.dart';
 import '../../widgets/matrix.dart';
 
-enum ActiveFilter { allChats, messages, groups, unread, spaces, tag }
+enum ActiveFilter {
+  allChats,
+  messages,
+  groups,
+  unread,
+  unanswered, // Connect-Bern
+  spaces,
+  tag,
+}
 
 extension LocalizedActiveFilter on ActiveFilter {
   String toLocalizedString(BuildContext context) {
@@ -40,6 +49,8 @@ extension LocalizedActiveFilter on ActiveFilter {
         return L10n.of(context).messages;
       case ActiveFilter.unread:
         return L10n.of(context).unread;
+      case ActiveFilter.unanswered:
+        return L10n.of(context).notAnswered;
       case ActiveFilter.groups:
         return L10n.of(context).groups;
       case ActiveFilter.spaces:
@@ -75,6 +86,21 @@ class ChatListController extends State<ChatList>
 
   late ActiveFilter activeFilter;
   String? activeTag;
+
+  // Connect-Bern: background checker for the "Not answered" filter.
+  CbUnansweredTracker? _unansweredTracker;
+  CbUnansweredTracker get unansweredTracker =>
+      _unansweredTracker ??= CbUnansweredTracker(Matrix.of(context).client, () {
+        if (mounted) setState(() {});
+      });
+
+  void _syncUnansweredTracker() {
+    if (activeFilter == ActiveFilter.unanswered) {
+      unansweredTracker.start();
+    } else {
+      _unansweredTracker?.stop();
+    }
+  }
 
   String? _activeSpaceId;
   String? get activeSpaceId => _activeSpaceId;
@@ -145,6 +171,9 @@ class ChatListController extends State<ChatList>
             room.isUnreadOrInvited &&
             (room.isDirectChat ||
                 (room.summary.mJoinedMemberCount ?? 0) <= 5);
+      case ActiveFilter.unanswered:
+        // Connect-Bern: lazy "Not answered" filter, see cb_unanswered.dart
+        return unansweredTracker.isUnanswered;
       case ActiveFilter.spaces:
         return (room) => room.isSpace;
       case ActiveFilter.tag:
@@ -418,10 +447,12 @@ class ChatListController extends State<ChatList>
     }
 
     super.initState();
+    _syncUnansweredTracker(); // Connect-Bern
   }
 
   @override
   void dispose() {
+    _unansweredTracker?.dispose(); // Connect-Bern
     _intentDataStreamSubscription?.cancel();
     _intentFileStreamSubscription?.cancel();
     _onRoomTagUpdate?.cancel();
@@ -904,6 +935,7 @@ class ChatListController extends State<ChatList>
       activeTag = tag;
       activeFilter = filter;
     });
+    _syncUnansweredTracker(); // Connect-Bern
     AppSettings.chatFilter.setItem(
       filter == ActiveFilter.tag ? tag! : filter.name,
     );
@@ -911,6 +943,8 @@ class ChatListController extends State<ChatList>
 
   void setActiveClient(Client client) {
     context.go('/rooms');
+    _unansweredTracker?.dispose(); // Connect-Bern: tracker is per client
+    _unansweredTracker = null;
     setState(() {
       activeFilter = ActiveFilter.allChats;
       _activeSpaceId = null;
