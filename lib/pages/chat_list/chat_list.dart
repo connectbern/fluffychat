@@ -33,9 +33,9 @@ import '../../widgets/matrix.dart';
 enum ActiveFilter {
   allChats,
   messages,
+  unanswered, // Connect-Bern: "Reply?", right after Messages
   groups,
   unread,
-  unanswered, // Connect-Bern
   spaces,
   tag,
 }
@@ -50,7 +50,7 @@ extension LocalizedActiveFilter on ActiveFilter {
       case ActiveFilter.unread:
         return L10n.of(context).unread;
       case ActiveFilter.unanswered:
-        return L10n.of(context).notAnswered;
+        return CbUnanswered.label(L10n.of(context).notAnswered);
       case ActiveFilter.groups:
         return L10n.of(context).groups;
       case ActiveFilter.spaces:

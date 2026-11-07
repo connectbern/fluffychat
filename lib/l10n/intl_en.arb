@@ -2825,7 +2825,9 @@
     "removeTag": "Remove tag",
     "tagName": "Tag name",
     "createNewTag": "Create new tag",
-    "notAnswered": "Not answered",
+    "notAnswered": "Reply?",
     "checkingChats": "Checking chats…",
+    "replyTabName": "Name of the \"Reply?\" tab",
+    "replyTabNameHint": "Leave empty for the default name",
     "noUnansweredChats": "Everything is answered 🎉"
 }

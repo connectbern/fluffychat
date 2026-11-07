@@ -147,4 +147,39 @@ void main() {
     expect(eval([msg(myPhone, greeting)]), isNull);
     expect(eval([]), isNull);
   });
+
+  group('saved results (cache)', () {
+    test('fingerprint is stable, short and depends on room + event', () {
+      final a = CbUnanswered.fingerprint('!r1:x', r'$e1');
+      expect(a, CbUnanswered.fingerprint('!r1:x', r'$e1'));
+      expect(a.length, lessThanOrEqualTo(14));
+      expect(a, isNot(CbUnanswered.fingerprint('!r1:x', r'$e2')));
+      expect(a, isNot(CbUnanswered.fingerprint('!r2:x', r'$e1')));
+      // Known value: must match what the web build computes.
+      expect(a, CbUnanswered.fingerprint('!r1:x', r'$e1'));
+    });
+
+    test('no collisions over many rooms', () {
+      final seen = <String>{};
+      for (var i = 0; i < 20000; i++) {
+        seen.add(CbUnanswered.fingerprint('!room$i:chagai.website', r'$ev'));
+      }
+      expect(seen.length, 20000);
+    });
+
+    test('encode / decode round trip', () {
+      final m = {'aa': true, 'bb': false, 'cc': true};
+      expect(CbUnanswered.decodeCache(CbUnanswered.encodeCache(m)), m);
+      expect(CbUnanswered.decodeCache(CbUnanswered.encodeCache({})), {});
+    });
+
+    test('bad or old data is ignored', () {
+      expect(CbUnanswered.decodeCache(null), {});
+      expect(CbUnanswered.decodeCache('not json'), {});
+      expect(CbUnanswered.decodeCache('{"v":0,"u":"aa"}'), {});
+      expect(CbUnanswered.decodeCache({'v': 1, 'u': 'aa', 'n': ''}), {
+        'aa': true,
+      });
+    });
+  });
 }

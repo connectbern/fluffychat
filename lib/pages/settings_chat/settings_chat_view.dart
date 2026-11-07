@@ -8,6 +8,7 @@ import 'package:fluffychat/widgets/settings_switch_list_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'cb_reply_tab_label_tile.dart';
 import 'settings_chat.dart';
 
 class SettingsChatView extends StatelessWidget {
@@ -56,6 +57,7 @@ class SettingsChatView extends StatelessWidget {
                 title: L10n.of(context).swipeRightToLeftToReply,
                 setting: AppSettings.swipeRightToLeftToReply,
               ),
+              const CbReplyTabLabelTile(), // Connect-Bern
               Divider(color: theme.dividerColor),
               ListTile(
                 title: Text(

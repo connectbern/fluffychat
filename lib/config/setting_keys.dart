@@ -71,7 +71,9 @@ enum AppSettings<T> {
   tos<String>('chat.fluffy.tos_url', 'https://fluffychat.im/en/tos'),
   sendTimelineEventTimeout<int>('chat.fluffy.send_timeline_event_timeout', 15),
   webNotificationSound<bool>('chat.fluffy.web_notification_sound', true),
-  chatFilter<String>('chat.fluffy.chat_filter', 'allChats');
+  chatFilter<String>('chat.fluffy.chat_filter', 'allChats'),
+  // Connect-Bern: own name for the "Reply?" tab; empty = default.
+  cbReplyTabLabel<String>('cb.reply_tab_label', '');
 
   final String key;
   final T defaultValue;

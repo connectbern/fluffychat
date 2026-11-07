@@ -2804,7 +2804,9 @@
     "supportFluffyChat": "FluffyChat unterstützen",
     "support": "Unterstützen",
     "fluffyChatSupportBannerMessage": "FluffyChat braucht DEINE Hilfe!\n❤️❤️❤️\nFluffyChat wird immer kostenlos bleiben, aber Entwicklung und Hosting kosten Geld.\nDie Zukunft des Projekts hängt von deiner Unterstützung ab.",
-    "notAnswered": "Unbeantwortet",
+    "notAnswered": "Antwort?",
     "checkingChats": "Chats werden geprüft…",
+    "replyTabName": "Name des Tabs „Antwort?“",
+    "replyTabNameHint": "Leer lassen für den Standardnamen",
     "noUnansweredChats": "Alles beantwortet 🎉"
 }

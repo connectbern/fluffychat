@@ -1,4 +1,4 @@
-// Connect-Bern: "Not answered" chat-list filter.
+// Connect-Bern: "Reply?" (formerly "Not answered") chat-list filter.
 //
 // A chat is "not answered" when the newest message from someone else has no
 // later answer from our side. Our side = the logged-in account, the other
@@ -14,6 +14,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:fluffychat/config/setting_keys.dart';
 import 'package:matrix/matrix.dart';
 
 /// Result of evaluating a chat.
@@ -49,6 +50,57 @@ class CbEv {
 }
 
 abstract class CbUnanswered {
+  /// Chip label: the user's own text from Settings → Chat, else [fallback]
+  /// (the translated default, "Reply?").
+  static String label(String fallback) {
+    final custom = AppSettings.cbReplyTabLabel.value.trim();
+    return custom.isEmpty ? fallback : custom;
+  }
+
+  /// Account-data type holding the saved results, so another device or a
+  /// fresh browser opens the tab instantly too.
+  static const String cacheType = 'website.chagai.reply_cache';
+
+  /// Short, stable fingerprint of "room X with last event Y" (two 32-bit
+  /// FNV-1a hashes, base36). Same result on web and native; the event and
+  /// room ids themselves are never stored.
+  static String fingerprint(String roomId, String lastEventId) {
+    final s = '$roomId|$lastEventId';
+    var a = 0x811c9dc5, b = 0x050c5d1f;
+    for (final c in s.codeUnits) {
+      a = _fnvStep(a ^ c);
+      b = _fnvStep(b ^ (c + 0x9e));
+    }
+    return a.toRadixString(36) + b.toRadixString(36).padLeft(7, '0');
+  }
+
+  // h * 16777619 mod 2^32 via shifts (exact in JavaScript as well).
+  static int _fnvStep(int h) =>
+      (h + (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24)) &
+      0xFFFFFFFF;
+
+  /// Saved results: fingerprint -> is unanswered.
+  static String encodeCache(Map<String, bool> verdicts) => jsonEncode({
+    'v': 1,
+    'u': [for (final e in verdicts.entries) if (e.value) e.key].join(','),
+    'n': [for (final e in verdicts.entries) if (!e.value) e.key].join(','),
+  });
+
+  static Map<String, bool> decodeCache(Object? raw) {
+    try {
+      final m = raw is String ? jsonDecode(raw) : raw;
+      if (m is! Map || m['v'] != 1) return {};
+      Iterable<String> ids(Object? v) =>
+          v is String && v.isNotEmpty ? v.split(',') : const [];
+      return {
+        for (final id in ids(m['n'])) id: false,
+        for (final id in ids(m['u'])) id: true,
+      };
+    } catch (_) {
+      return {};
+    }
+  }
+
   /// Senders that are always "our side", besides the logged-in user.
   static const Set<String> ownSenders = {
     '@stayinginbern:chagai.website',
@@ -135,11 +187,27 @@ abstract class CbUnanswered {
 ///   those are not enough (e.g. just our automatic greeting) one short history
 ///   fetch is made. Results are cached per last event and the list fills in as
 ///   they arrive.
+///
+/// Saved results: every verdict that needed a closer look is remembered as a
+/// fingerprint of (room, last event) - in this browser (instant on reload)
+/// and in Matrix account data (instant on another device). A room only gets
+/// checked again when a new event arrives in it.
 class CbUnansweredTracker {
   final Client client;
   final void Function() onChanged;
 
-  CbUnansweredTracker(this.client, this.onChanged);
+  CbUnansweredTracker(this.client, this.onChanged) {
+    _loadSaved();
+  }
+
+  /// Fingerprint -> unanswered, from the last session / other devices.
+  Map<String, bool> _saved = {};
+  String? _lastLocal;
+  String? _lastRemote;
+  Timer? _saveLocal;
+  Timer? _saveRemote;
+
+  String get _localKey => 'cb.reply_cache.${client.userID}';
 
   static const int _historyLimit = 30;
   static const int _localLimit = 15;
@@ -164,11 +232,13 @@ class CbUnansweredTracker {
     if (_active) return;
     _active = true;
     _dmRoomIds = null; // m.direct may have changed since last time
+    _loadSaved(); // another device may have saved newer results
     _sub = client.onTimelineEvent.stream.listen(_onTimelineEvent);
     _pump();
   }
 
   void stop() {
+    if (_active) _flush();
     _active = false;
     _sub?.cancel();
     _sub = null;
@@ -179,6 +249,74 @@ class CbUnansweredTracker {
   void dispose() {
     stop();
     _notify?.cancel();
+    _saveLocal?.cancel();
+    _saveRemote?.cancel();
+  }
+
+  void _loadSaved() {
+    final remote = client.accountData[CbUnanswered.cacheType]?.content;
+    String? local;
+    try {
+      local = AppSettings.store.getString(_localKey);
+    } catch (_) {}
+    _lastLocal = local;
+    _saved = {
+      ...CbUnanswered.decodeCache(remote?['data']),
+      ...CbUnanswered.decodeCache(local),
+    };
+  }
+
+  String _snapshot() => CbUnanswered.encodeCache({
+    for (final e in _cache.entries)
+      if (e.value.saved)
+        CbUnanswered.fingerprint(e.key, e.value.lastEventId):
+            e.value.state == CbAnswerState.unanswered,
+  });
+
+  void _scheduleSave() {
+    _saveLocal ??= Timer(const Duration(seconds: 3), () {
+      _saveLocal = null;
+      _writeLocal(_snapshot());
+    });
+    // Account data syncs to every device, so upload rarely.
+    _saveRemote ??= Timer(const Duration(minutes: 3), () {
+      _saveRemote = null;
+      _writeRemote(_snapshot());
+    });
+  }
+
+  void _flush() {
+    if (_saveLocal == null && _saveRemote == null) return;
+    _saveLocal?.cancel();
+    _saveRemote?.cancel();
+    _saveLocal = _saveRemote = null;
+    final snap = _snapshot();
+    _writeLocal(snap);
+    _writeRemote(snap);
+  }
+
+  void _writeLocal(String snap) {
+    if (snap == _lastLocal) return;
+    _lastLocal = snap;
+    try {
+      AppSettings.store.setString(_localKey, snap);
+    } catch (_) {}
+  }
+
+  void _writeRemote(String snap) {
+    final userId = client.userID;
+    if (userId == null || snap == _lastRemote) return;
+    if (client.accountData[CbUnanswered.cacheType]?.content['data'] == snap) {
+      _lastRemote = snap;
+      return;
+    }
+    _lastRemote = snap;
+    client
+        .setAccountData(userId, CbUnanswered.cacheType, {'data': snap})
+        .catchError((e) {
+          _lastRemote = null;
+          Logs().w('Could not save the Reply? results', e);
+        });
   }
 
   void _onTimelineEvent(Event e) {
@@ -187,7 +325,7 @@ class CbUnansweredTracker {
         e.type == EventTypes.Reaction) {
       final key = e.room.lastEvent?.eventId;
       if (key != null) {
-        _cache[e.room.id] = _Verdict(key, CbAnswerState.answered);
+        _cache[e.room.id] = _Verdict(key, CbAnswerState.answered, saved: true);
         _changed();
       }
     }
@@ -214,6 +352,16 @@ class CbUnansweredTracker {
     if (quick == CbAnswerState.answered) {
       _cache[room.id] = _Verdict(last.eventId, quick!);
       return false;
+    }
+    // Known from an earlier session or another device?
+    final saved = _saved[CbUnanswered.fingerprint(room.id, last.eventId)];
+    if (saved != null) {
+      _cache[room.id] = _Verdict(
+        last.eventId,
+        saved ? CbAnswerState.unanswered : CbAnswerState.answered,
+        saved: true,
+      );
+      return saved;
     }
     // Their message last (we may have reacted) or our automatic post last
     // (look further back): decide in the background, show once known.
@@ -256,7 +404,7 @@ class CbUnansweredTracker {
         client.userID,
       );
       if (localState != null) {
-        _cache[roomId] = _Verdict(last.eventId, localState);
+        _cache[roomId] = _Verdict(last.eventId, localState, saved: true);
         return;
       }
       // 2) Not enough locally: one short history fetch from the server.
@@ -292,13 +440,21 @@ class CbUnansweredTracker {
       final state =
           CbUnanswered.evaluate(events, client.userID) ??
           CbAnswerState.noInbound;
-      _cache[roomId] = _Verdict(last.eventId, state);
+      _cache[roomId] = _Verdict(last.eventId, state, saved: true);
     } catch (e, s) {
       Logs().w('Not-answered check failed for $roomId', e, s);
+      // Don't retry on every list refresh: forbidden = never (saved),
+      // anything else = again next session.
+      _cache[roomId] = _Verdict(
+        last.eventId,
+        CbAnswerState.noInbound,
+        saved: e is MatrixException && e.error == MatrixError.M_FORBIDDEN,
+      );
     }
   }
 
   void _changed() {
+    _scheduleSave();
     if (_notify?.isActive ?? false) return;
     _notify = Timer(const Duration(milliseconds: 1000), () {
       if (_active) onChanged();
@@ -309,5 +465,8 @@ class CbUnansweredTracker {
 class _Verdict {
   final String lastEventId;
   final CbAnswerState state;
-  const _Verdict(this.lastEventId, this.state);
+
+  /// Needed a closer look -> worth remembering across sessions.
+  final bool saved;
+  const _Verdict(this.lastEventId, this.state, {this.saved = false});
 }
