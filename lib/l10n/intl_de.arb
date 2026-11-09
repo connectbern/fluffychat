@@ -2808,5 +2808,9 @@
     "checkingChats": "Chats werden geprüft…",
     "replyTabName": "Name des Tabs „Antwort?“",
     "replyTabNameHint": "Leer lassen für den Standardnamen",
+    "checkingChatsLeft": "Noch {count} Chats werden geprüft – Ergebnisse erscheinen laufend",
+    "@checkingChatsLeft": {"placeholders": {"count": {"type": "int"}}},
+    "chatsNotChecked": "{count} Chats konnten nicht geprüft werden",
+    "@chatsNotChecked": {"placeholders": {"count": {"type": "int"}}},
     "noUnansweredChats": "Alles beantwortet 🎉"
 }

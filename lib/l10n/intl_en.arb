@@ -2829,5 +2829,9 @@
     "checkingChats": "Checking chats…",
     "replyTabName": "Name of the \"Reply?\" tab",
     "replyTabNameHint": "Leave empty for the default name",
+    "checkingChatsLeft": "Still checking {count} chats – results appear as they come in",
+    "@checkingChatsLeft": {"placeholders": {"count": {"type": "int"}}},
+    "chatsNotChecked": "{count} chats couldn't be checked",
+    "@chatsNotChecked": {"placeholders": {"count": {"type": "int"}}},
     "noUnansweredChats": "Everything is answered 🎉"
 }

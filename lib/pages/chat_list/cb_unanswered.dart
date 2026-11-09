@@ -211,7 +211,11 @@ class CbUnansweredTracker {
 
   static const int _historyLimit = 30;
   static const int _localLimit = 15;
-  static const int _parallel = 2;
+  static const int _parallel = 4;
+
+  /// A check that takes longer than this is given up for now (a lost
+  /// request on a mobile connection used to stall the whole queue forever).
+  static const Duration _checkTimeout = Duration(seconds: 15);
 
   /// Pause after each room so the (single-threaded) web UI stays smooth even
   /// on accounts with thousands of chats.
@@ -223,10 +227,23 @@ class CbUnansweredTracker {
   final Set<String> _queued = {};
   int _running = 0;
   bool _active = false;
+  bool _disposed = false;
   StreamSubscription<Event>? _sub;
   Timer? _notify;
 
-  bool get isBusy => _active && (_running > 0 || _queue.isNotEmpty);
+  bool get isBusy => _running > 0 || _queue.isNotEmpty;
+
+  /// Chats still waiting to be checked.
+  int get pending => _running + _queue.length;
+
+  /// Chats whose check failed or timed out this session (see [retryFailed]).
+  int get failed => _cache.values.where((v) => v.failed).length;
+
+  /// Checks the failed chats again.
+  void retryFailed() {
+    _cache.removeWhere((_, v) => v.failed);
+    onChanged();
+  }
 
   void start() {
     if (_active) return;
@@ -237,17 +254,20 @@ class CbUnansweredTracker {
     _pump();
   }
 
+  /// Leaving the tab: the chats already queued keep being checked in the
+  /// background, so the tab is ready next time; nothing new is queued.
   void stop() {
     if (_active) _flush();
     _active = false;
     _sub?.cancel();
     _sub = null;
-    _queue.clear();
-    _queued.clear();
   }
 
   void dispose() {
     stop();
+    _disposed = true;
+    _queue.clear();
+    _queued.clear();
     _notify?.cancel();
     _saveLocal?.cancel();
     _saveRemote?.cancel();
@@ -377,10 +397,13 @@ class CbUnansweredTracker {
   }
 
   void _pump() {
-    while (_active && _running < _parallel && _queue.isNotEmpty) {
+    while (!_disposed && _running < _parallel && _queue.isNotEmpty) {
       final roomId = _queue.removeAt(0);
       _running++;
-      _check(roomId).then((_) => Future.delayed(_breather)).whenComplete(() {
+      _check(roomId)
+          .timeout(_checkTimeout, onTimeout: () => _giveUp(roomId))
+          .then((_) => Future.delayed(_breather))
+          .whenComplete(() {
         _running--;
         _queued.remove(roomId);
         _changed();
@@ -444,13 +467,29 @@ class CbUnansweredTracker {
     } catch (e, s) {
       Logs().w('Not-answered check failed for $roomId', e, s);
       // Don't retry on every list refresh: forbidden = never (saved),
-      // anything else = again next session.
-      _cache[roomId] = _Verdict(
-        last.eventId,
-        CbAnswerState.noInbound,
-        saved: e is MatrixException && e.error == MatrixError.M_FORBIDDEN,
-      );
+      // anything else = via "Retry" or next session.
+      if (e is MatrixException && e.error == MatrixError.M_FORBIDDEN) {
+        _cache[roomId] = _Verdict(
+          last.eventId,
+          CbAnswerState.noInbound,
+          saved: true,
+        );
+      } else {
+        _giveUp(roomId);
+      }
     }
+  }
+
+  void _giveUp(String roomId) {
+    final last = client.getRoomById(roomId)?.lastEvent;
+    if (last == null) return;
+    final known = _cache[roomId];
+    if (known != null && known.lastEventId == last.eventId) return;
+    _cache[roomId] = _Verdict(
+      last.eventId,
+      CbAnswerState.noInbound,
+      failed: true,
+    );
   }
 
   void _changed() {
@@ -468,5 +507,13 @@ class _Verdict {
 
   /// Needed a closer look -> worth remembering across sessions.
   final bool saved;
-  const _Verdict(this.lastEventId, this.state, {this.saved = false});
+
+  /// Check failed or timed out; hidden for now, can be retried.
+  final bool failed;
+  const _Verdict(
+    this.lastEventId,
+    this.state, {
+    this.saved = false,
+    this.failed = false,
+  });
 }

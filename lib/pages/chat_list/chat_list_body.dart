@@ -1,5 +1,6 @@
 import 'package:fluffychat/config/setting_keys.dart';
 import 'package:fluffychat/l10n/l10n.dart';
+import 'package:fluffychat/pages/chat_list/cb_reply_status_bar.dart';
 import 'package:fluffychat/pages/chat_list/chat_list.dart';
 import 'package:fluffychat/pages/chat_list/chat_list_item.dart';
 import 'package:fluffychat/pages/chat_list/dummy_chat_list_item.dart';
@@ -177,11 +178,10 @@ class ChatListViewBody extends StatelessWidget {
                         ],
                       ),
                     ),
-                  // Connect-Bern: "Not answered" is still checking older chats.
+                  // Connect-Bern: "Reply?" progress / could-not-check line.
                   if (!controller.isSearchMode &&
-                      controller.activeFilter == ActiveFilter.unanswered &&
-                      controller.unansweredTracker.isBusy)
-                    const LinearProgressIndicator(minHeight: 2),
+                      controller.activeFilter == ActiveFilter.unanswered)
+                    CbReplyStatusBar(controller.unansweredTracker),
                   if (controller.isSearchMode)
                     SearchTitle(
                       title: L10n.of(context).chats,
